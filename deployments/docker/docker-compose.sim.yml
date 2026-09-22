@@ -1,0 +1,90 @@
+services:
+  # ==========================================================
+  # STATION ALPHA (Primary Operational Station)
+  # Frontend: http://localhost:3000 | API: http://localhost:8080
+  # ==========================================================
+  backend-alpha:
+    build:
+      context: ../../
+      dockerfile: deployments/docker/Dockerfile.backend
+    container_name: aapdasetu-alpha-backend
+    ports:
+      - "8080:8080"
+      - "9000:9000"
+    environment:
+      - HTTP_PORT=8080
+      - P2P_PORT=9000
+      - MDNS_RENDEZVOUS=aapdasetu-sim-net
+      - NODE_NAME=Station-Alpha-HQ
+    restart: unless-stopped
+    networks:
+      - aapdasetu-mesh
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  frontend-alpha:
+    build:
+      context: ../../
+      dockerfile: deployments/docker/Dockerfile.frontend
+    container_name: aapdasetu-alpha-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - BACKEND_HOST=backend-alpha
+      - BACKEND_PORT=8080
+    depends_on:
+      backend-alpha:
+        condition: service_healthy
+    networks:
+      - aapdasetu-mesh
+    restart: unless-stopped
+
+  # ==========================================================
+  # STATION BRAVO (Secondary Response Outpost)
+  # Frontend: http://localhost:3001 | API: http://localhost:8081
+  # ==========================================================
+  backend-bravo:
+    build:
+      context: ../../
+      dockerfile: deployments/docker/Dockerfile.backend
+    container_name: aapdasetu-bravo-backend
+    ports:
+      - "8081:8080"
+      - "9001:9000"
+    environment:
+      - HTTP_PORT=8080
+      - P2P_PORT=9000
+      - MDNS_RENDEZVOUS=aapdasetu-sim-net
+      - NODE_NAME=Station-Bravo-Outpost
+    restart: unless-stopped
+    networks:
+      - aapdasetu-mesh
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  frontend-bravo:
+    build:
+      context: ../../
+      dockerfile: deployments/docker/Dockerfile.frontend
+    container_name: aapdasetu-bravo-frontend
+    ports:
+      - "3001:80"
+    environment:
+      - BACKEND_HOST=backend-bravo
+      - BACKEND_PORT=8080
+    depends_on:
+      backend-bravo:
+        condition: service_healthy
+    networks:
+      - aapdasetu-mesh
+    restart: unless-stopped
+
+networks:
+  aapdasetu-mesh:
+    driver: bridge
