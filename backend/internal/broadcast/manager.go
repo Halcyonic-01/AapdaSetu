@@ -12,15 +12,30 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 )
 
+// Persister is an optional storage backend for persistent message retention (e.g., SQLite).
+type Persister interface {
+	SaveMessage(ctx context.Context, msg *ChatMessage) error
+	GetMessages(ctx context.Context, limit, offset int) ([]*ChatMessage, error)
+}
+
 // Manager coordinates chat and emergency broadcast messaging across GossipSub topics.
 type Manager struct {
 	node      *p2p.Node
 	cfg       *config.Config
 	store     *MessageStore
+	persister Persister
 	chatSub   *pubsub.Subscription
 	alertSub  *pubsub.Subscription
 	ctx       context.Context
 	cancel    context.CancelFunc
+}
+
+// NewTestManager creates a Manager without pubsub subscriptions for unit testing purposes.
+func NewTestManager(persister Persister) *Manager {
+	return &Manager{
+		persister: persister,
+		store:     NewMessageStore(100),
+	}
 }
 
 // NewManager creates and starts a new GossipSub broadcast manager.
@@ -89,6 +104,11 @@ func (m *Manager) listen(sub *pubsub.Subscription, label string) {
 
 		log.Printf("[Broadcast][%s] From %s (%s): %s", label, chatMsg.SenderName, chatMsg.SenderID, chatMsg.Body)
 		m.store.Add(&chatMsg)
+		if m.persister != nil {
+			if err := m.persister.SaveMessage(m.ctx, &chatMsg); err != nil {
+				log.Printf("[Broadcast] Failed to persist inbound message %s: %v", chatMsg.ID, err)
+			}
+		}
 	}
 }
 
@@ -110,8 +130,13 @@ func (m *Manager) SendChat(ctx context.Context, body string) (*ChatMessage, erro
 		return nil, fmt.Errorf("failed to publish to chat topic: %w", err)
 	}
 
-	// Record in local store
+	// Record in memory store and persistent storage
 	m.store.Add(msg)
+	if m.persister != nil {
+		if err := m.persister.SaveMessage(ctx, msg); err != nil {
+			log.Printf("[Broadcast] Failed to persist sent chat message %s: %v", msg.ID, err)
+		}
+	}
 	return msg, nil
 }
 
@@ -141,12 +166,31 @@ func (m *Manager) SendBroadcast(ctx context.Context, body string, severity strin
 	// Also publish to chat topic so it appears in standard conversational timeline
 	_ = m.node.PubSub().Publish(ctx, m.cfg.ChatTopic, data)
 
+	// Record in memory store and persistent storage
 	m.store.Add(msg)
+	if m.persister != nil {
+		if err := m.persister.SaveMessage(ctx, msg); err != nil {
+			log.Printf("[Broadcast] Failed to persist sent emergency message %s: %v", msg.ID, err)
+		}
+	}
 	log.Printf("[Broadcast] *** EMERGENCY ALERT DISPATCHED: %s (Severity: %s) ***", body, severity)
 	return msg, nil
 }
 
-// Store returns the message store reference.
+// SetPersister sets or updates the persistent storage provider.
+func (m *Manager) SetPersister(p Persister) {
+	m.persister = p
+}
+
+// GetMessages retrieves recent messages, prioritizing persistent storage if configured.
+func (m *Manager) GetMessages(ctx context.Context, limit, offset int) ([]*ChatMessage, error) {
+	if m.persister != nil {
+		return m.persister.GetMessages(ctx, limit, offset)
+	}
+	return m.store.ListRecent(limit), nil
+}
+
+// Store returns the in-memory message store reference.
 func (m *Manager) Store() *MessageStore {
 	return m.store
 }

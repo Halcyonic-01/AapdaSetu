@@ -13,8 +13,9 @@ type Config struct {
 	Rendezvous  string // mDNS rendezvous string for peer discovery
 	ChatTopic   string // PubSub topic name for standard chat
 	AlertTopic  string // PubSub topic name for emergency broadcast
-	DataDir     string // Directory for storing node state / logs
-	NodeName    string // Human-readable friendly node name
+	DataDir       string // Directory for storing node state / logs
+	NodeName      string // Human-readable friendly node name
+	BootstrapPeer string // Optional initial peer multiaddr to connect to on start
 }
 
 // LoadConfig parses command-line flags and environment variables.
@@ -28,6 +29,7 @@ func LoadConfig() *Config {
 	flag.StringVar(&cfg.AlertTopic, "alert-topic", getEnv("ALERT_TOPIC", "aapdasetu-alert"), "PubSub topic for emergency broadcasts")
 	flag.StringVar(&cfg.DataDir, "data-dir", getEnv("DATA_DIR", "./data"), "Path for local node storage")
 	flag.StringVar(&cfg.NodeName, "node-name", getEnv("NODE_NAME", "AapdaSetu-Node"), "Friendly display name for this node")
+	flag.StringVar(&cfg.BootstrapPeer, "peer", getEnv("BOOTSTRAP_PEER", ""), "Optional initial peer multiaddr to connect to on start")
 
 	flag.Parse()
 	return cfg

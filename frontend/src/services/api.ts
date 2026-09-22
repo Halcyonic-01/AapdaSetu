@@ -21,8 +21,8 @@ export const apiService = {
     return res.json();
   },
 
-  async getMessages(limit: number = 100): Promise<ChatMessage[]> {
-    const res = await fetch(`${API_BASE}/chat/messages?limit=${limit}`);
+  async getMessages(limit: number = 50, offset: number = 0): Promise<ChatMessage[]> {
+    const res = await fetch(`${API_BASE}/chat/messages?limit=${limit}&offset=${offset}`);
     if (!res.ok) return [];
     return res.json();
   },

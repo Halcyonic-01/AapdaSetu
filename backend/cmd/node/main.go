@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/Halcyonic-01/AapdaSetu/backend/internal/broadcast"
 	"github.com/Halcyonic-01/AapdaSetu/backend/internal/p2p"
 	"github.com/Halcyonic-01/AapdaSetu/backend/internal/peers"
+	"github.com/Halcyonic-01/AapdaSetu/backend/internal/storage"
 )
 
 func main() {
@@ -31,22 +33,44 @@ func main() {
 	rootCtx, rootCancel := context.WithCancel(context.Background())
 	defer rootCancel()
 
-	// 1. Initialize Peer Store
+	// 1. Initialize SQLite Message Store
+	dbPath := filepath.Join(cfg.DataDir, "aapdasetu.db")
+	sqliteStore, err := storage.NewSQLiteStore(dbPath)
+	if err != nil {
+		log.Fatalf("[Storage] Failed to initialize SQLite store: %v", err)
+	}
+	defer sqliteStore.Close()
+	log.Printf("[Storage] Local SQLite database active: %s", dbPath)
+
+	// 2. Initialize Peer Store
 	peerStore := peers.NewStore()
 
-	// 2. Initialize P2P Mesh Node (libp2p Host + mDNS Discovery + GossipSub)
+	// 3. Initialize P2P Mesh Node (libp2p Host + mDNS Discovery + GossipSub)
 	p2pNode, err := p2p.NewNode(rootCtx, cfg, peerStore)
 	if err != nil {
 		log.Fatalf("[P2P Mesh] Failed to initialize node: %v", err)
 	}
 	defer p2pNode.Close()
 
-	// 3. Initialize Emergency Broadcast & Chat Engine
+	// 4. Initialize Emergency Broadcast & Chat Engine
 	broadcastMgr, err := broadcast.NewManager(rootCtx, p2pNode, cfg, nil)
 	if err != nil {
 		log.Fatalf("[Broadcast] Failed to initialize broadcast engine: %v", err)
 	}
 	defer broadcastMgr.Close()
+	broadcastMgr.SetPersister(sqliteStore)
+
+	// Connect to bootstrap peer if specified
+	if cfg.BootstrapPeer != "" {
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			if err := p2pNode.ConnectDirect(rootCtx, cfg.BootstrapPeer); err != nil {
+				log.Printf("[P2P Mesh] Failed to connect to bootstrap peer %s: %v", cfg.BootstrapPeer, err)
+			} else {
+				log.Printf("[P2P Mesh] Connected to bootstrap peer: %s", cfg.BootstrapPeer)
+			}
+		}()
+	}
 
 	// 4. Initialize API Server
 	apiServer := api.NewServer(cfg, p2pNode, peerStore, broadcastMgr)

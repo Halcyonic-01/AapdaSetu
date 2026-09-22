@@ -78,7 +78,7 @@ export default function App() {
       const [status, peerList, msgList] = await Promise.all([
         apiService.getStatus(),
         apiService.getPeers(),
-        apiService.getMessages(200),
+        apiService.getMessages(50),
       ]);
 
       setNodeStatus(status);
