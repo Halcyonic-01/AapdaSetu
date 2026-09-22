@@ -87,9 +87,9 @@ AapdaSetu/
 │   ├── config/               # Configuration & CLI flag parser
 │   ├── internal/
 │   │   ├── api/              # HTTP REST handlers & CORS middleware
-│   │   ├── p2p/              # libp2p host & discovery (Phase 2)
-│   │   ├── broadcast/        # Emergency broadcast logic (Phase 3)
-│   │   └── peers/            # Peer state management (Phase 2 & 3)
+│   │   ├── p2p/              # libp2p host & discovery
+│   │   ├── broadcast/        # Emergency broadcast logic
+│   │   └── peers/            # Peer state management
 │   ├── go.mod & go.sum       # Go module with libp2p dependencies
 ├── frontend/
 │   ├── src/
@@ -102,13 +102,3 @@ AapdaSetu/
 │   └── docker/               # Dockerfile.backend, Dockerfile.frontend, docker-compose.yml
 └── scripts/                  # Development and test helper scripts
 ```
-
----
-
-## 🗺️ Implementation Roadmap
-
-- [x] **Phase 1: Project Bootstrap & Skeleton** (Go HTTP node, libp2p dependencies, React Vite UI shell, Docker configs)
-- [ ] **Phase 2: P2P Mesh & mDNS Discovery** (libp2p Host, mDNS service, Peer tracker)
-- [ ] **Phase 3: Emergency Chat & Broadcast** (GossipSub topic handlers, REST dispatchers)
-- [ ] **Phase 4: Full React Dashboard** (Real-time message feed, SOS modal, peer list)
-- [ ] **Phase 5: Docker Packaging & CI/CD** (GitHub Actions, multi-node testing)

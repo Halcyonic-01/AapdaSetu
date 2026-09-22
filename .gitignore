@@ -31,3 +31,7 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Project documents / PDFs
+*.pdf
+
