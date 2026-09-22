@@ -12,10 +12,9 @@ import {
   Server,
   RefreshCw,
   Clock,
-  Shield,
   FileText,
-  Activity,
-  Layers,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { apiService } from './services/api';
 import { NodeStatus, Peer, ChatMessage } from './types';
@@ -55,6 +54,8 @@ export default function App() {
   const [sending, setSending] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [justRefreshed, setJustRefreshed] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
 
   // Emergency Broadcast Modal
   const [broadcastModalOpen, setBroadcastModalOpen] = useState<boolean>(false);
@@ -74,7 +75,6 @@ export default function App() {
 
   const fetchData = async () => {
     try {
-      setRefreshing(true);
       const [status, peerList, msgList] = await Promise.all([
         apiService.getStatus(),
         apiService.getPeers(),
@@ -99,6 +99,19 @@ export default function App() {
       }
     } catch {
       // Quiet background polling
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchData(),
+        new Promise((resolve) => setTimeout(resolve, 600)),
+      ]);
+      setJustRefreshed(true);
+      setTimeout(() => setJustRefreshed(false), 2000);
     } finally {
       setRefreshing(false);
     }
@@ -180,32 +193,24 @@ export default function App() {
 
         <div className="px-6 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded bg-[#133e6f] border border-[#235896] flex items-center justify-center font-bold text-white shadow-sm">
-              <Shield className="w-5 h-5 text-[#d97706]" />
-            </div>
+            <img
+              src="/emblem.jpg"
+              alt="AapdaSetu Emblem"
+              className="w-10 h-10 rounded-full border border-[#235896] object-cover bg-white shadow-sm"
+            />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-sm tracking-wide uppercase text-white">
                   AapdaSetu | आपदा सेतु
                 </span>
-                <span className="text-[10px] bg-[#d97706] text-slate-900 font-bold px-1.5 py-0.2 rounded uppercase">
-                  Emergency Mesh
-                </span>
               </div>
               <p className="text-[11px] text-[#93c5fd]">
-                National Disaster Emergency Communication Portal • Offline P2P Mesh Protocol
+                Offline Local Communication
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 text-xs">
-            <div className="hidden sm:flex items-center gap-2 bg-[#133e6f]/80 px-3 py-1 rounded border border-[#235896] text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-emerald-300 font-semibold uppercase">Network: Active (LAN)</span>
-              <span className="text-slate-400">|</span>
-              <span className="text-slate-300">Zero Internet Required</span>
-            </div>
-
+          <div className="flex items-center gap-3 text-xs">
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
               className="p-1.5 rounded hover:bg-[#133e6f] text-slate-300 hover:text-white transition"
@@ -228,79 +233,46 @@ export default function App() {
       {/* WORKSPACE AREA */}
       <div className="flex-1 flex overflow-hidden">
         {/* LEFT CONTROL & DISPATCH PANEL */}
-        <aside className="w-72 md:w-80 bg-white border-r border-[#cbd5e1] flex flex-col flex-shrink-0 select-none">
-          {/* Emergency Broadcast Dispatch Button */}
-          <div className="p-3.5 border-b border-[#cbd5e1] bg-[#fff5f5]">
-            <button
-              onClick={() => setBroadcastModalOpen(true)}
-              className="w-full py-2.5 px-3 bg-[#b91c1c] hover:bg-[#991b1b] text-white text-xs font-bold uppercase tracking-wider rounded border border-[#7f1d1d] shadow-sm flex items-center justify-center gap-2 transition cursor-pointer"
-            >
-              <AlertTriangle className="w-4 h-4 text-amber-300 flex-shrink-0" />
-              <span>Emergency Broadcast</span>
-            </button>
-            <p className="text-[10px] text-[#991b1b] font-medium text-center mt-1.5">
-              Transmits high-priority bulletin to all local nodes
-            </p>
-          </div>
-
-          {/* Station Status Block */}
-          <div className="p-3.5 border-b border-[#cbd5e1] bg-[#f8fafc] text-xs space-y-2">
-            <div className="flex items-center justify-between font-bold text-[#0b2545] uppercase text-[11px]">
-              <span className="flex items-center gap-1.5">
-                <Activity className="w-3.5 h-3.5 text-[#0b2545]" />
-                Station Status
-              </span>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded border border-emerald-300">
-                OPERATIONAL
-              </span>
+        {sidebarOpen && (
+          <aside className="w-72 md:w-80 bg-white border-r border-[#cbd5e1] flex flex-col flex-shrink-0 select-none">
+            {/* Emergency Broadcast Dispatch Button */}
+            <div className="p-3.5 border-b border-[#cbd5e1] bg-[#fff5f5]">
+              <button
+                onClick={() => setBroadcastModalOpen(true)}
+                className="w-full py-2.5 px-3 bg-[#b91c1c] hover:bg-[#991b1b] text-white text-xs font-bold uppercase tracking-wider rounded border border-[#7f1d1d] shadow-sm flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-300 flex-shrink-0" />
+                <span>Emergency Broadcast</span>
+              </button>
             </div>
 
-            <div className="bg-white p-2.5 rounded border border-[#cbd5e1] space-y-1 text-[11px]">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Terminal Name:</span>
-                <span className="font-semibold text-slate-800 truncate max-w-[130px]">
-                  {nodeStatus?.node_name || 'AapdaSetu-Node'}
+            {/* Connected Terminals (Nearby Devices) */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="px-3.5 py-2.5 bg-[#f1f5f9] border-b border-[#cbd5e1] flex items-center justify-between text-xs">
+                <span className="font-bold text-[#0b2545] uppercase text-[11px] flex items-center gap-1.5">
+                  <Server className="w-3.5 h-3.5 text-slate-600" />
+                  Connected Terminals
                 </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[11px] font-bold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-[#cbd5e1]">
+                    {connectedPeers.length} Active
+                  </span>
+                  <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="p-1 rounded hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                    title="Close sidebar"
+                    aria-label="Close sidebar"
+                  >
+                    <PanelLeftClose className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Listen Port:</span>
-                <span className="font-mono text-slate-800">{nodeStatus?.p2p_port || 9000}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Uptime:</span>
-                <span className="font-mono text-slate-800">{nodeStatus?.uptime || '0s'}</span>
-              </div>
-              <div className="pt-1 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-slate-500">Node ID:</span>
-                <button
-                  onClick={copyMyId}
-                  className="font-mono text-[10px] text-blue-700 hover:underline flex items-center gap-1"
-                  title="Copy full Node ID"
-                >
-                  <span>{nodeStatus?.peer_id ? `${nodeStatus.peer_id.slice(0, 6)}...` : 'Generating'}</span>
-                  {copiedId ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-slate-400" />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Connected Terminals (Nearby Devices) */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="px-3.5 py-2.5 bg-[#f1f5f9] border-b border-[#cbd5e1] flex items-center justify-between text-xs">
-              <span className="font-bold text-[#0b2545] uppercase text-[11px] flex items-center gap-1.5">
-                <Server className="w-3.5 h-3.5 text-slate-600" />
-                Connected Terminals
-              </span>
-              <span className="font-mono text-[11px] font-bold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-[#cbd5e1]">
-                {connectedPeers.length} Active
-              </span>
-            </div>
 
             <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5">
               {peers.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-500 space-y-2">
                   <Radio className="w-6 h-6 mx-auto text-slate-400 animate-pulse" />
-                  <p className="font-semibold text-slate-700">Scanning Local Mesh</p>
+                  <p className="font-semibold text-slate-700">Scanning Local Network</p>
                   <p className="text-[11px] text-slate-500">
                     Listening for AapdaSetu stations on local Wi-Fi / hotspot...
                   </p>
@@ -338,21 +310,38 @@ export default function App() {
 
           {/* Footer refresh action */}
           <div className="p-2.5 bg-[#f8fafc] border-t border-[#cbd5e1] flex items-center justify-between text-[11px] text-slate-600">
-            <span>Protocol: mDNS / GossipSub</span>
+            <span>Local Network</span>
             <button
-              onClick={fetchData}
-              className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1 cursor-pointer"
+              onClick={handleManualRefresh}
+              disabled={refreshing}
+              className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 cursor-pointer disabled:opacity-60 transition"
+              title="Refresh network status and dispatches"
             >
-              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-[#0b2545]' : ''}`} />
+              <span>{refreshing ? 'Refreshing...' : justRefreshed ? 'Updated' : 'Refresh'}</span>
             </button>
           </div>
         </aside>
+      )}
 
-        {/* CENTER DISPATCH LOG & MESSAGING LOG */}
-        <main className="flex-1 flex flex-col bg-white overflow-hidden">
-          {/* Section Header */}
-          <div className="px-6 py-2.5 bg-[#f8fafc] border-b border-[#cbd5e1] flex items-center justify-between flex-shrink-0">
+      {/* CENTER DISPATCH LOG & MESSAGING LOG */}
+      <main className="flex-1 flex flex-col bg-white overflow-hidden">
+        {/* Section Header */}
+        <div className="px-6 py-2.5 bg-[#f8fafc] border-b border-[#cbd5e1] flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-1 rounded hover:bg-slate-200 text-slate-600 hover:text-[#0b2545] transition cursor-pointer"
+              title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+              aria-label="Toggle sidebar"
+            >
+              {sidebarOpen ? (
+                <PanelLeftClose className="w-4 h-4" />
+              ) : (
+                <PanelLeftOpen className="w-4 h-4 text-[#0b2545]" />
+              )}
+            </button>
+            <div className="h-4 w-px bg-slate-300" />
             <div>
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#0b2545]" />
@@ -361,9 +350,10 @@ export default function App() {
                 </h2>
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Local Mesh Channel • {connectedPeers.length} active terminal{connectedPeers.length === 1 ? '' : 's'} linked
+                Local Channel • {connectedPeers.length} active device{connectedPeers.length === 1 ? '' : 's'} connected
               </p>
             </div>
+          </div>
 
             <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
@@ -375,14 +365,16 @@ export default function App() {
           <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-[#f8fafc]">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center text-slate-500 p-8">
-                <div className="w-12 h-12 rounded bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-600 mb-2.5">
-                  <Layers className="w-6 h-6" />
-                </div>
+                <img
+                  src="/emblem.jpg"
+                  alt="AapdaSetu Emblem"
+                  className="w-24 h-24 rounded-full border-2 border-slate-300 object-cover shadow-sm mb-3 opacity-90"
+                />
                 <h3 className="font-bold text-sm text-slate-800 uppercase tracking-wide">
                   Communication Log Initialized
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mt-1 leading-relaxed">
-                  No transmissions recorded in this operational session. All messages dispatched here are relayed instantaneously to all reachable terminals over the local mesh.
+                  No transmissions recorded in this operational session. All messages dispatched here are relayed instantaneously to all reachable devices over the local network.
                 </p>
               </div>
             ) : (
@@ -452,7 +444,7 @@ export default function App() {
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Type dispatch message to broadcast to nearby mesh terminals..."
+                placeholder="Type message to broadcast to nearby devices..."
                 disabled={sending}
                 className="flex-1 bg-[#f8fafc] border border-[#cbd5e1] rounded px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#0b2545] focus:bg-white"
               />
@@ -462,13 +454,9 @@ export default function App() {
                 className="px-4 py-2 rounded bg-[#0b2545] hover:bg-[#133e6f] disabled:bg-slate-300 text-white disabled:text-slate-500 text-xs font-bold uppercase tracking-wider transition cursor-pointer disabled:cursor-not-allowed flex items-center gap-1.5"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>Transmit</span>
+                <span>{sending ? 'Sending...' : 'Send'}</span>
               </button>
             </form>
-            <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1 px-1">
-              <span>Transmitting on GossipSub channel: <code>aapdasetu-chat</code></span>
-              <span>Press [Enter] to send immediately</span>
-            </div>
           </div>
         </main>
       </div>
@@ -575,7 +563,7 @@ export default function App() {
                 disabled={!broadcastText.trim() || broadcastSending}
                 className="px-4 py-1.5 rounded bg-[#b91c1c] hover:bg-[#991b1b] disabled:bg-slate-300 text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer disabled:cursor-not-allowed"
               >
-                {broadcastSending ? 'Transmitting...' : 'Dispatch Broadcast'}
+                {broadcastSending ? 'Sending...' : 'Send Broadcast'}
               </button>
             </div>
           </div>
