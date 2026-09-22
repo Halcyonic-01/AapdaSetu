@@ -1,31 +1,30 @@
 export interface NodeStatus {
   node_name: string;
   status: string;
+  peer_id?: string;
+  addresses?: string[];
   p2p_port: number;
   http_port: number;
   uptime: string;
   peer_count: number;
+  rendezvous?: string;
   timestamp: string;
 }
 
 export interface Peer {
   id: string;
   name?: string;
-  address: string;
-  connected_at: string;
-  status: 'online' | 'offline';
+  addresses: string[];
+  connected: boolean;
+  last_seen: string;
 }
 
 export interface ChatMessage {
   id: string;
-  from: string;
-  from_name?: string;
+  sender_id: string;
+  sender_name: string;
   body: string;
   timestamp: string;
-  is_self?: boolean;
-}
-
-export interface BroadcastMessage extends ChatMessage {
   emergency: boolean;
   severity?: 'critical' | 'warning' | 'info';
 }

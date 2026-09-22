@@ -1,4 +1,4 @@
-import { NodeStatus, Peer, ChatMessage, BroadcastMessage } from '../types';
+import { NodeStatus, Peer, ChatMessage } from '../types';
 
 const API_BASE = '/api';
 
@@ -21,8 +21,8 @@ export const apiService = {
     return res.json();
   },
 
-  async getMessages(): Promise<ChatMessage[]> {
-    const res = await fetch(`${API_BASE}/chat/messages`);
+  async getMessages(limit: number = 100): Promise<ChatMessage[]> {
+    const res = await fetch(`${API_BASE}/chat/messages?limit=${limit}`);
     if (!res.ok) return [];
     return res.json();
   },
@@ -33,17 +33,23 @@ export const apiService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body }),
     });
-    if (!res.ok) throw new Error('Failed to send message');
+    if (!res.ok) {
+      const errData = await res.text();
+      throw new Error(errData || 'Failed to send message');
+    }
     return res.json();
   },
 
-  async sendBroadcast(body: string, severity: 'critical' | 'warning' | 'info' = 'critical'): Promise<BroadcastMessage> {
+  async sendBroadcast(body: string, severity: 'critical' | 'warning' | 'info' = 'critical'): Promise<ChatMessage> {
     const res = await fetch(`${API_BASE}/broadcast/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body, emergency: true, severity }),
+      body: JSON.stringify({ body, severity }),
     });
-    if (!res.ok) throw new Error('Failed to send broadcast');
+    if (!res.ok) {
+      const errData = await res.text();
+      throw new Error(errData || 'Failed to send broadcast');
+    }
     return res.json();
   },
 };
