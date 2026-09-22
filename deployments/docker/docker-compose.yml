@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ../../
+      dockerfile: deployments/docker/Dockerfile.backend
+    container_name: aapdasetu-backend
+    ports:
+      - "8080:8080"
+      - "9000:9000"
+    environment:
+      - HTTP_PORT=8080
+      - P2P_PORT=9000
+      - MDNS_RENDEZVOUS=aapdasetu-emergency-net
+      - NODE_NAME=AapdaSetu-Node-Alpha
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  frontend:
+    build:
+      context: ../../
+      dockerfile: deployments/docker/Dockerfile.frontend
+    container_name: aapdasetu-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
