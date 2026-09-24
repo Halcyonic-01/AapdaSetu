@@ -35,3 +35,12 @@ Thumbs.db
 # Project documents / PDFs
 *.pdf
 
+# Local SQLite databases and data directories
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+backend/data/
+
+

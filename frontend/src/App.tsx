@@ -18,32 +18,7 @@ import {
 } from 'lucide-react';
 import { apiService } from './services/api';
 import { NodeStatus, Peer, ChatMessage } from './types';
-
-// Web Audio API beep for emergency bulletins (100% offline)
-function playAlertBeep() {
-  try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(800, ctx.currentTime);
-    osc.frequency.setValueAtTime(600, ctx.currentTime + 0.15);
-
-    gain.gain.setValueAtTime(0.18, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start();
-    osc.stop(ctx.currentTime + 0.3);
-  } catch {
-    // Audio autoplay restrictions
-  }
-}
+import { playAlertSound, initAudioUnlocker } from './utils/audio';
 
 export default function App() {
   const [nodeStatus, setNodeStatus] = useState<NodeStatus | null>(null);
@@ -92,7 +67,9 @@ export default function App() {
         if (emergencyMsgs.length > 0) {
           const newest = emergencyMsgs[emergencyMsgs.length - 1];
           if (msgList.length > prevMsgCount.current && newest.sender_id !== status.peer_id) {
-            if (soundEnabled) playAlertBeep();
+            if (soundEnabled) {
+              playAlertSound(newest.severity || 'critical');
+            }
           }
         }
         prevMsgCount.current = msgList.length;
@@ -116,6 +93,11 @@ export default function App() {
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    const cleanup = initAudioUnlocker();
+    return cleanup;
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -161,6 +143,9 @@ export default function App() {
       setBroadcastSending(true);
       const newAlert = await apiService.sendBroadcast(trimmed, broadcastSeverity);
       setMessages((prev) => [...prev, newAlert]);
+      if (soundEnabled) {
+        playAlertSound(broadcastSeverity);
+      }
       setBroadcastModalOpen(false);
       setBroadcastText('');
       setTimeout(scrollToBottom, 40);
@@ -609,18 +594,32 @@ export default function App() {
               </div>
 
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                <span className="font-semibold text-slate-700">Audio Distress Beep</span>
-                <button
-                  type="button"
-                  onClick={() => setSoundEnabled(!soundEnabled)}
-                  className={`px-2.5 py-1 rounded text-xs font-bold uppercase border ${
-                    soundEnabled
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                      : 'bg-slate-100 border-slate-300 text-slate-500'
-                  }`}
-                >
-                  {soundEnabled ? 'Enabled' : 'Muted'}
-                </button>
+                <div>
+                  <span className="font-semibold text-slate-700 block">Audio Distress Siren</span>
+                  <span className="text-[10px] text-slate-500">Offline multi-tone emergency alert</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => playAlertSound('critical')}
+                    className="px-2 py-1 rounded text-[11px] font-bold uppercase bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 transition flex items-center gap-1 cursor-pointer"
+                    title="Play test emergency siren"
+                  >
+                    <Volume2 className="w-3 h-3 text-amber-700" />
+                    <span>Test</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSoundEnabled(!soundEnabled)}
+                    className={`px-2.5 py-1 rounded text-xs font-bold uppercase border cursor-pointer transition ${
+                      soundEnabled
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                        : 'bg-slate-100 border-slate-300 text-slate-500'
+                    }`}
+                  >
+                    {soundEnabled ? 'Enabled' : 'Muted'}
+                  </button>
+                </div>
               </div>
             </div>
 
